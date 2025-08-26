@@ -74,19 +74,19 @@ class _CounterScreenState extends State<CounterScreen> {
               children: [
                 ElevatedButton(
                   onPressed: _decrement,
-                  style: ElevatedButton.styleFrom(primary: Colors.red), 
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red), 
                   child: const Icon(Icons.remove)
                 ),
                 const SizedBox(width: 20),
                 ElevatedButton(
                   onPressed: _reset,
-                  style: ElevatedButton.styleFrom(primary: Colors.grey),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
                   child: const Icon(Icons.refresh)
                 ),
                 const SizedBox(width: 20),
                 ElevatedButton(
                   onPressed: _increment,
-                  style: ElevatedButton.styleFrom(primary: Colors.green), 
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green), 
                   child: const Icon(Icons.add),
                   )
               ],
