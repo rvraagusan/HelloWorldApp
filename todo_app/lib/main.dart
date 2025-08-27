@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:todo_app/db_helper.dart';
+import 'package:todo_app/models/task.dart';
 
-void main() {
+void main() async {
+ WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+
+  Hive.registerAdapter(TaskAdapter());
+  await Hive.openBox<Task>('tasks');
+
   runApp(const MyApp());
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -12,8 +22,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Todo App',
-      home: TodoScreen(),
+      title: 'To-Do App',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const TodoScreen(),
     );
   }
 }
@@ -26,71 +37,91 @@ class TodoScreen extends StatefulWidget {
 }
 
 class _TodoScreenState extends State<TodoScreen> {
-  final List<String> _todos =[];
-  final TextEditingController _controller = TextEditingController();
+  final _controller = TextEditingController();
+  late Box<Task> taskBox;
 
-  void _addTodo() {
+  @override
+  void initState() {
+    super.initState();
+    taskBox = Hive.box<Task>('tasks');
+  }
+
+  void _addTask() {
     if (_controller.text.isNotEmpty) {
-      setState(() {
-        _todos.add(_controller.text);
-        _controller.clear();
-      });
+      final task = Task(task: _controller.text); 
+      taskBox.add(task);
+      _controller.clear();
+      setState(() {});
     }
   }
 
-  void _removeTodo(int index) {
-    setState(() {
-      _todos.removeAt(index);
-    });
+  void _toggleTask(Task task) {
+    task.isDone = !task.isDone;
+    task.save();
+    setState(() {});
+  }
+
+  void _deleteTask(int index) {
+    taskBox.deleteAt(index);
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Todo App"),
-        centerTitle: true,
+        title: const Text("To-Do App"),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: "Enter a task...",
-                      border: OutlineInputBorder(),
-                    ),
+      body: ValueListenableBuilder(
+        valueListenable: taskBox.listenable(), 
+        builder: (context, Box<Task> box, _) {
+          if (box.isEmpty) {
+            return const Center(child: Text("No tasks yet"));
+          }
+
+          return ListView.builder(
+            itemCount: box.length,
+            itemBuilder: (context, index) {
+              final task = box.getAt(index)!;
+              return ListTile(
+                title: Text(
+                  task.task,
+                  style: TextStyle(
+                    decoration: 
+                      task.isDone ? TextDecoration.lineThrough : null,
                   ),
                 ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: _addTodo, 
-                  child: const Text("Add")
-                  ),
-              ],
-            ),
-            ),
+                leading: Checkbox(
+                  value: task.isDone, 
+                  onChanged: (_) => _toggleTask(task),
+                ),
+                trailing: IconButton(
+                  onPressed: () => _deleteTask(index), 
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                ),
+              );
+            },
+          );
+        },
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          children: [
             Expanded(
-              child: _todos.isEmpty
-              ? const Center(child: Text("No tasks yet!"))
-              : ListView.builder(
-                itemCount: _todos.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(_todos[index]),
-                    trailing: IconButton(
-                      onPressed: () => _removeTodo(index), 
-                      icon: const Icon(Icons.delete, color: Colors.red,)
-                      ),
-                  );
-                }
-                )
-              )
-        ],
+              child: TextField(
+                controller: _controller,
+                decoration: const InputDecoration(
+                  labelText: "Enter a task",
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: _addTask, 
+              icon: const Icon(Icons.add),
+            ),
+          ],
+        ),
       ),
     );
   }
